@@ -1,0 +1,261 @@
+{
+  "objects": [
+    {
+      "output": {
+        "ref": "DataNodeId_S2VN4"
+      },
+      "input": {
+        "ref": "DataNodeId_QTLII"
+      },
+      "onFail": {
+        "ref": "ActionId_DpLeC"
+      },
+      "name": "COPYtoRedshiftCopyActivity",
+      "runsOn": {
+        "ref": "ResourceId_PTi0A"
+      },
+      "id": "RedshiftCopyActivityId_BM94d",
+      "type": "RedshiftCopyActivity",
+      "insertMode": "TRUNCATE"
+    },
+    {
+      "database": {
+        "ref": "RedshiftDatabaseId_dDU6E"
+      },
+      "name": "CopyToRedshiftDataNode",
+      "id": "DataNodeId_S2VN4",
+      "schemaName": "DQ",
+      "type": "RedshiftDataNode",
+      "tableName": "lifetime_page_counts_pattern1"
+    },
+    {
+      "failureAndRerunMode": "CASCADE",
+      "resourceRole": "DataPipelineDefaultResourceRole",
+      "role": "DataPipelineDefaultRole",
+      "pipelineLogUri": "s3://dev-lxk-home/users/bishopp/data-pipelines",
+      "scheduleType": "ONDEMAND",
+      "name": "Default",
+      "id": "Default"
+    },
+    {
+      "resourceRole": "DataPipelineDefaultResourceRole",
+      "role": "DataPipelineDefaultRole",
+      "name": "DefaultEC2Resource",
+      "id": "ResourceId_PTi0A",
+      "type": "Ec2Resource",
+      "terminateAfter": "2 Days"
+    },
+    {
+      "connectionString": "#{myRSJDBC}",
+      "databaseName": "idw",
+      "*password": "#{*myPASSWORD}",
+      "name": "RedshiftDuck",
+      "id": "RedshiftDatabaseId_dDU6E",
+      "region": "us-east-1",
+      "type": "RedshiftDatabase",
+      "username": "#{myUSERNAME}"
+    },
+    {
+      "database": {
+        "ref": "RedshiftDatabaseId_dDU6E"
+      },
+      "name": "UnloadFromRedshiftDevicePageCountAllDataNode",
+      "id": "DataNodeId_hvw5E",
+      "schemaName": "DQ",
+      "type": "RedshiftDataNode",
+      "tableName": "DEVICE_PAGE_COUNT_ALL_LAST_10"
+    },
+    {
+      "directoryPath": "#{mySources3Path}#",
+      "name": "S3InputDataNode",
+      "id": "DataNodeId_NKf2E",
+      "type": "S3DataNode"
+    },
+    {
+      "role": "DataPipelineDefaultRole",
+      "subject": "LTPC-Reset-Down - Data Pipeline - FAILURE",
+      "name": "OnFailSNSAlarmAction",
+      "id": "ActionId_DpLeC",
+      "message": "The #{node.type} name #{node.name} scheduled for #{node.@scheduledStartTime} finish with a status of #{node.@status}. Error Id: #{node.errorId} Error Message: #{node.errorMessage} Error Stack Trace: #{node.errorStackTrace}",
+      "type": "SnsAlarm",
+      "topicArn": "#{myTopicARN}"
+    },
+    {
+      "output": {
+        "ref": "DataNodeId_QTLII"
+      },
+      "input": {
+        "ref": "DataNodeId_NKf2E"
+      },
+      "name": "LtpcResetDownPigEmrActivity",
+      "step": "s3://elasticmapreduce/libs/script-runner/script-runner.jar,s3://elasticmapreduce/libs/pig/pig-script,--run-pig-script,--pig-versions,0.12.0,--args,-f,#{myPigLocation}/ltpc-reset-down-Mar-2-a.pig.pig,\n-param,USERNAME=#{myUSERNAME},\n-param,OUTPUT=#{myLoadReadyPath}#{format(@scheduledStartTime,'YYYY-MM-dd-HH-mm-ss-z')}/,\n-param,INPUT=s3://#{myEnvironment}-lxk-home/users/bishopp/ltpc-reset-down/input/#{format(@scheduledStartTime,'YYYY-MM-dd')}/",
+      "runsOn": {
+        "ref": "EmrClusterId_ztbjt"
+      },
+      "id": "EmrActivityId_Hf21S",
+      "type": "EmrActivity"
+    },
+    {
+      "subnetId": "#{mySubnetID}",
+      "actionOnResourceFailure": "retryAll",
+      "configuration": {
+        "ref": "EmrConfigurationId_RQB4p"
+      },
+      "maximumRetries": "1",
+      "enableDebugging": "true",
+      "coreInstanceCount": "#{myEMRCoreInstances}",
+      "releaseLabel": "#{myEMRVersion}",
+      "masterInstanceType": "#{myEMRMaster}",
+      "type": "EmrCluster",
+      "terminateAfter": "2 Days",
+      "name": "DefaultEmrCluster1",
+      "actionOnTaskFailure": "continue",
+      "coreInstanceType": "#{myEMRCore}",
+      "id": "EmrClusterId_ztbjt"
+    },
+    {
+      "directoryPath": "#{myLoadReadyPath}#",
+      "name": "S3OutputDataNode",
+      "id": "DataNodeId_QTLII",
+      "type": "S3DataNode"
+    },
+    {
+      "name": "DefaultEmrConfiguration1",
+      "id": "EmrConfigurationId_RQB4p",
+      "classification": "emrfs-site",
+      "type": "EmrConfiguration"
+    },
+    {
+      "output": {
+        "ref": "DataNodeId_NKf2E"
+      },
+      "input": {
+        "ref": "DataNodeId_hvw5E"
+      },
+      "name": "UnloadRedshiftDevicePageCountAll",
+      "runsOn": {
+        "ref": "ResourceId_PTi0A"
+      },
+      "id": "CopyActivityId_ZEt8T",
+      "type": "RedshiftCopyActivity",
+      "insertMode": "TRUNCATE"
+    }
+  ],
+  "parameters": [
+    {
+      "watermark": "myEMRMaster",
+      "description": "myEMRMaster",
+      "id": "myEMRMaster",
+      "type": "string"
+    },
+    {
+      "watermark": "myEMRCoreInstances",
+      "description": "myEMRCoreInstances",
+      "id": "myEMRCoreInstances",
+      "type": "string"
+    },
+    {
+      "watermark": "myUSERNAME",
+      "description": "myUSERNAME",
+      "id": "myUSERNAME",
+      "type": "string"
+    },
+    {
+      "watermark": "myJobName",
+      "description": "myJobName",
+      "id": "myJobName",
+      "type": "string"
+    },
+    {
+      "watermark": "myRSJDBC",
+      "description": "myRSJDBC",
+      "id": "myRSJDBC",
+      "type": "string"
+    },
+    {
+      "watermark": "myINPUTs3Path",
+      "description": "myINPUTs3Path",
+      "id": "myINPUTs3Path",
+      "type": "string"
+    },
+    {
+      "watermark": "myAlerts3Path",
+      "description": "myAlerts3Path",
+      "id": "myAlerts3Path",
+      "type": "string"
+    },
+    {
+      "watermark": "myEMRVersion",
+      "description": "myEMRVersion",
+      "id": "myEMRVersion",
+      "type": "string"
+    },
+    {
+      "watermark": "myLoadReadyPath",
+      "description": "myLoadReadyPath",
+      "id": "myLoadReadyPath",
+      "type": "string"
+    },
+    {
+      "watermark": "myTopicARN",
+      "description": "myTopicARN",
+      "id": "myTopicARN",
+      "type": "string"
+    },
+    {
+      "watermark": "mySubnetID",
+      "description": "mySubnetID",
+      "id": "mySubnetID",
+      "type": "string"
+    },
+    {
+      "watermark": "*myPASSWORD",
+      "description": "*myPASSWORD",
+      "id": "*myPASSWORD",
+      "type": "string"
+    },
+    {
+      "watermark": "myEMRCore",
+      "description": "myEMRCore",
+      "id": "myEMRCore",
+      "type": "string"
+    },
+    {
+      "watermark": "mySources3Path",
+      "description": "mySources3Path",
+      "id": "mySources3Path",
+      "type": "string"
+    },
+    {
+      "watermark": "myEnvironment",
+      "description": "myEnvironment",
+      "id": "myEnvironment",
+      "type": "string"
+    },
+    {
+      "watermark": "mySGID",
+      "description": "mySGID",
+      "id": "mySGID",
+      "type": "string"
+    }
+  ],
+  "values": {
+    "myLoadReadyPath": "s3://#{myEnvironment}lxk-home/users/bishopp/LTPC-reset-down-output/",
+    "*myPASSWORD": "datap!Pe!5",
+    "mySources3Path": "s3://#{myEnvironment}lxk-home/users/bishopp/LTPC-reset-down-input",
+    "mySGID": "sg-fd9d7d99",
+    "myEnvironment": "dev-lxk",
+    "myAlerts3Path": "#{myS3StagePath}/ALERTS",
+    "myJobName": "Ltpc-reset-down-daily",
+    "myUSERNAME": "datapipe",
+    "myEMRVersion": "emr-5.0.0",
+    "myTopicARN": "arn:aws:sns:us-east-1:214805274709:Java-Based-Orchestration",
+    "myEMRCoreInstances": "4",
+    "mySubnetID": "subnet-99af47b2",
+    "myEMRMaster": "m3.2xlarge",
+    "myEMRCore": "r3.8xlarge",
+    "myRSJDBC": "jdbc:postgresql://duck.cff0iaonktcp.us-east-1.redshift.amazonaws.com:5439/idw?tcpKeepAlive=true&ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory",
+    "myPigLocation": "s3://#{myEnvironment}lxk-home/users/bishopp/LTPC-reset-down-pig/",
+    "myINPUTs3Path": "#{myS3StagePath}/INPUT"
+  }
+}
